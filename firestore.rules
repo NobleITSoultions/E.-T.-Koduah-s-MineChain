@@ -1,0 +1,93 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: users
+    // - name: string (required)
+    // - email: string (required, email format)
+    // - role: string (required, enum: miner, transport, warehouse, exporter, regulator, admin)
+    // - organization: string
+    // - createdAt: timestamp
+    //
+    // Collection: batches
+    // - mineralType: string (required)
+    // - weight: number (required)
+    // - origin: string (required)
+    // - createdBy: string (required, uid)
+    // - createdAt: timestamp
+    // - currentStage: string
+    // - status: string (active, flagged, completed)
+    //
+    // Collection: transactions
+    // - batchId: string (required)
+    // - stage: string (required)
+    // - actor: string (required, uid)
+    // - timestamp: timestamp
+    // - location: string
+    // - weightAtStage: number
+    // - anomalyScore: number
+    // - isSuspicious: bool
+    // - blockchainHash: string
+    // - dataHash: string
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasRole(role) {
+      return isAuthenticated() && getUserData().role == role;
+    }
+
+    function isAdmin() {
+      return hasRole('admin') || (request.auth.token.email == "eobu@umat.edu.gh" && request.auth.token.email_verified == true);
+    }
+
+    function isRegulator() {
+      return hasRole('regulator') || isAdmin();
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && 
+                      request.resource.data.keys().hasAll(['name', 'email', 'role']) &&
+                      isValidEmail(request.resource.data.email) &&
+                      request.resource.data.role in ['miner', 'transport', 'warehouse', 'exporter', 'regulator', 'admin'];
+      allow update: if isOwner(userId) || isAdmin();
+    }
+
+    match /batches/{batchId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && (hasRole('miner') || isAdmin());
+      allow update: if isAuthenticated();
+    }
+
+    match /transactions/{transactionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAdmin();
+    }
+  }
+}

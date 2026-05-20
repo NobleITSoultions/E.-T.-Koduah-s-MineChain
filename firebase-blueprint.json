@@ -1,0 +1,64 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Stakeholder in the mining supply chain",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Full name of the user" },
+        "email": { "type": "string", "format": "email", "description": "Email address" },
+        "role": { "type": "string", "enum": ["miner", "transport", "warehouse", "exporter", "regulator", "admin"], "description": "System role" },
+        "organization": { "type": "string", "description": "Company or agency name" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Account creation timestamp" }
+      },
+      "required": ["name", "email", "role"]
+    },
+    "Batch": {
+      "title": "Batch",
+      "description": "A registered mineral batch",
+      "type": "object",
+      "properties": {
+        "mineralType": { "type": "string", "description": "Type of mineral (e.g. Gold)" },
+        "weight": { "type": "number", "description": "Initial weight in kg" },
+        "origin": { "type": "string", "description": "Mine site location" },
+        "createdBy": { "type": "string", "description": "UID of the miner" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Registration timestamp" },
+        "currentStage": { "type": "string", "description": "Current supply chain stage" },
+        "status": { "type": "string", "enum": ["active", "flagged", "completed"], "description": "Current status" }
+      },
+      "required": ["mineralType", "weight", "origin", "createdBy"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "A supply chain movement or event",
+      "type": "object",
+      "properties": {
+        "batchId": { "type": "string", "description": "Reference to the batch" },
+        "stage": { "type": "string", "description": "Stage name (e.g. transport_start)" },
+        "actor": { "type": "string", "description": "UID of the actor" },
+        "timestamp": { "type": "string", "format": "date-time", "description": "Event timestamp" },
+        "location": { "type": "string", "description": "Current location" },
+        "weightAtStage": { "type": "number", "description": "Weight measured at this stage" },
+        "anomalyScore": { "type": "number", "description": "AI-calculated anomaly score" },
+        "isSuspicious": { "type": "boolean", "description": "Whether the transaction is flagged" },
+        "blockchainHash": { "type": "string", "description": "Ethereum transaction hash" },
+        "dataHash": { "type": "string", "description": "SHA-256 hash of transaction data" }
+      },
+      "required": ["batchId", "stage", "actor", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile documents"
+    },
+    "/batches/{batchId}": {
+      "schema": "Batch",
+      "description": "Mineral batch documents"
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Supply chain event logs"
+    }
+  }
+}
